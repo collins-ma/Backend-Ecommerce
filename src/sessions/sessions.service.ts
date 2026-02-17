@@ -39,7 +39,7 @@ export class SessionService {
   }
 
   // Logout other devices
-  async logoutOtherDevices(userId: string, currentSessionId: string) {
+  async logoutOtherDevices(userId: string, currentSessionId?: string) {
     await this.sessionModel.deleteMany({ userId, sessionId: { $ne: currentSessionId } });
     return { message: 'Logged out from other devices' };
   }
