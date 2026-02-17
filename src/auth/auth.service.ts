@@ -68,7 +68,7 @@ export class AuthService {
       // Generate short-lived access token
       const accessToken = this.jwtService.sign(payload, {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: '10m',
+        expiresIn: '1m',
       });
 
       return { accessToken };
@@ -114,7 +114,7 @@ export class AuthService {
       // Generate new access token
       const accessToken = this.jwtService.sign(
         { _id: payload._id, roles: payload.roles, username: payload.username, sessionId: payload.sessionId },
-        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '10m' }
+        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '1m' }
       );
 
       // Optional: generate new refresh token if you want rotation
