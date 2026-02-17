@@ -14,6 +14,21 @@ import { Roles } from 'src/auth/decorators/roles.decorators';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @Patch(':id/deactivate')
+  
+  async deactivate(@Param('id') id: string) {
+    return this.usersService.deactivateUser(id);
+  }
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+
+  @Patch(':id/activate')
+  async activate(@Param('id') id: string) {
+    return this.usersService.activateUser(id);
+  }
+
 
   @Post('verify')
   async verify(@Body() body: { email: string; code: string }) {

@@ -28,6 +28,9 @@ export class User extends Document {
 
   @Prop({default:false})
   isVerified:boolean;
+
+  @Prop({ default: true })
+  isActive: boolean;
   
   @Prop()
 

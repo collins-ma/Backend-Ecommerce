@@ -9,6 +9,7 @@ import { CreateUserDto } from 'src/dto/create-user.dto';
 import { UpdateUserDto } from 'src/dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
 import { MailerService } from '@nestjs-modules/mailer';
+import { SessionService } from 'src/sessions/sessions.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from './user.schema';
@@ -18,6 +19,7 @@ export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private mailerService: MailerService,
+    private sessionService: SessionService,
   ) {}
 
   // ---------------------------
@@ -231,7 +233,7 @@ export class UsersService {
   // Find by username
   // ---------------------------
   async findByUsername(username: string): Promise<User> {
-    const user = await this.userModel.findOne({ username }).exec();
+    const user = await this.userModel.findOne({ username }) .select('+email  +isVerified +isActive ').exec();
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
@@ -260,4 +262,36 @@ export class UsersService {
     if (!deleted) throw new NotFoundException('User not found');
     return deleted;
   }
+
+
+  async deactivateUser(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    if (!user.isActive) return { message: 'User already deactivated' };
+
+    user.isActive = false;
+    await user.save();
+
+    // Delete all sessions for this user
+    await this.sessionService.logoutOtherDevices(userId);
+
+    return { message: 'User deactivated successfully' };
+  }
+  
+  async activateUser(userId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    if (user.isActive) return { message: 'User already active' };
+
+    user.isActive = true;
+    await user.save();
+
+    return { message: 'User activated successfully' };
+  }
+
+
+
+
 }

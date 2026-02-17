@@ -3,10 +3,20 @@ import { AuthService } from './auth.service';
 import type { Response, Request } from 'express';
 import { ForgotPasswordDto } from './Forgot-password.dto';
 import { ResetPasswordDto } from './reset-password.dto';
+import { Patch, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from './guard/auth.guard';
+import { ChangePasswordDto } from './ChangePasswordDto.dto';
+type requestObj={
+  user:any
+}
 @Controller('auth')
+
+
+
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  
   // ------------------- LOGIN -------------------
   @Post('login')
   @HttpCode(200)
@@ -41,6 +51,13 @@ export class AuthController {
   //   const sessionId = req.headers['x-session-id'] as string;
   //   return this.authService.logout(sessionId, response);
   // }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('change-password')
+  async changePassword(@Req() req: requestObj, @Body() dto: ChangePasswordDto) {
+    const userId=req.user._id
+    return this.authService.changePassword(userId, dto);
+  }
 
   @Post('forgot-password')
   forgotPassword(@Body() dto: ForgotPasswordDto) {

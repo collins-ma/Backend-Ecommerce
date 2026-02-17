@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException,NotFoundException , BadRequestException,InternalServerErrorException,ForbiddenException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from 'src/users/users.service';
+import { HttpException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Response, Request } from 'express';
 import {MailerService} from '@nestjs-modules/mailer';
@@ -8,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid'; 
 import { SessionService } from 'src/sessions/sessions.service';
-
+import { ChangePasswordDto } from './ChangePasswordDto.dto';
 
 
 @Injectable()
@@ -21,9 +22,9 @@ export class AuthService {
     private readonly sessionService: SessionService,
   ) {}
 
-  // ------------------- VALIDATE USER -------------------
   async validateUser(username: string, password: string) {
     const user = await this.userService.findByUsername(username);
+    console.log('userInfo', user)
     if (user && (await bcrypt.compare(password, user.password))) {
       const { password: _pwd, ...result } = user.toObject();
       return result;
@@ -31,14 +32,28 @@ export class AuthService {
     throw new UnauthorizedException('Invalid credentials');
   }
 
-  // ------------------- LOGIN -------------------
+  
   async login(user: any, response: Response, req: Request) {
     try {
+
+      if (!user.isActive) {
+        throw new UnauthorizedException('Account deactivated');
+      }
+
+
+      if (!user.isVerified) {
+        // Simply return the flag + email
+        return {
+          needsVerification: true,
+          email: user.email,
+        };
+      }
+    
 
       const sessionId = uuidv4()
       const payload = { _id: user._id, roles: user.roles, username: user.username, sessionId };
 
-      // Generate refresh token (long-lived)
+
       const refreshToken = this.jwtService.sign(payload, {
         secret: process.env.REFRESH_TOKEN_SECRET,
         expiresIn: '1d', 
@@ -54,31 +69,31 @@ export class AuthService {
         refreshToken,
         userAgent: req.headers['user-agent']?.toString() || 'unknown',
         ipAddress: req.ip,
-        expiresAt: new Date(Date.now() + 3 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 1*24*60* 60 * 1000),
       });
 
-      // Set refresh token as HTTP-only cookie
+   
       response.cookie('jwt', refreshToken, {
         httpOnly: true,
          secure:true,
         sameSite: 'none',
-        maxAge:  24*60* 60 * 1000, 
+        maxAge:  1*24*60* 60 * 1000, 
       });
 
-      // Generate short-lived access token
       const accessToken = this.jwtService.sign(payload, {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: '10m',
+        expiresIn: '30s',
       });
 
       return { accessToken };
     } catch (err) {
+
+      if (err instanceof HttpException) throw err;
       
       throw new InternalServerErrorException('Login failed');
     }
   }
 
-  // ------------------- REFRESH TOKEN -------------------
   async refreshToken(refreshToken: string, response:Response) {
     try {
       if (!refreshToken) {
@@ -95,7 +110,7 @@ export class AuthService {
 
 
       if (!session) {
-        // Clear refresh token cookie because the session does not exist
+       
         response.clearCookie('jwt', {
           httpOnly: true,
           secure: true,
@@ -111,16 +126,13 @@ export class AuthService {
       
 
 
-      // Generate new access token
+      
       const accessToken = this.jwtService.sign(
         { _id: payload._id, roles: payload.roles, username: payload.username, sessionId: payload.sessionId },
-        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '10m' }
+        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '30s' }
       );
 
-      // Optional: generate new refresh token if you want rotation
-      // const newRefreshToken = this.jwtService.sign(payload, { secret: process.env.REFRESH_TOKEN_SECRET, expiresIn: '7d' });
-      // response.cookie('jwt', newRefreshToken, { httpOnly: true, secure: false, sameSite: 'strict', maxAge: 7*24*60*60*1000 });
-
+     
       return { accessToken };
     } catch (err: any) {
       console.error('Refresh token error:', err);
@@ -136,19 +148,28 @@ export class AuthService {
     }
   }
 
-  // ------------------- LOGOUT -------------------
-  // async logout(sessionId: string, res: Response) {
-  //   // Remove session from DB
-  //   await this.sessionService.logoutCurrent(sessionId, res);
-  
-  //   // Clear the refresh token cookie
-  //   res.clearCookie('jwt', {
-  //     httpOnly: true,
-  //     secure: true,
-  //     sameSite: 'none',
-  //   });
-  
-  //   return { message: 'Logout successful' };
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    // 1. Get the user
+    const user = await this.userService.findById(userId);
+    if (!user) throw new NotFoundException('User not found');
+
+    // 2. Verify old password
+    const isMatch = await bcrypt.compare(dto.oldPassword, user.password);
+    if (!isMatch) throw new BadRequestException('Old password is incorrect');
+
+    // 3. Confirm new password
+    if (dto.newPassword !== dto.confirmPassword) {
+      throw new BadRequestException('New password and confirm password do not match');
+    }
+
+    // 4. Hash new password and save
+    user.password = await bcrypt.hash(dto.newPassword, 10);
+    await user.save();
+
+    return { message: 'Password changed successfully' };
+  }
+
   
   async forgotPassword(email: string) {
     const user = await this.userService.findByEmail(email );
@@ -158,7 +179,7 @@ export class AuthService {
 
     const token = crypto.randomBytes(32).toString('hex');
     const expiry = new Date();
-    expiry.setHours(expiry.getHours() + 1); // token valid 1 hour
+    expiry.setHours(expiry.getHours() + 1); 
 
     user.resetToken = token;
     user.resetTokenExpiry = expiry;
@@ -166,7 +187,7 @@ export class AuthService {
 
     const resetLink = `${this.configService.get('BASE_URL')}/reset-password?token=${token}`;
 
-    // Send real email (dev and prod)
+    
     await this.mailerService.sendMail({
       to: user.email,
       subject: 'Reset Your Password',
@@ -225,7 +246,7 @@ export class AuthService {
       `,
     });
 
-    console.log(`Reset link sent to ${user.email}: ${resetLink}`); // optional logging
+    console.log(`Reset link sent to ${user.email}: ${resetLink}`); 
     return { message: 'Reset link sent' };
   }
 
