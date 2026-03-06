@@ -12,13 +12,13 @@ export class Category extends Document {
   @Prop({ required: true })
   name: string;
 
-  // virtual field placeholder
+
   products: Product[];
 }
 
 export const CategorySchema = SchemaFactory.createForClass(Category);
 
-// 👇 virtual field definition BEFORE exporting model
+
 CategorySchema.virtual('products', {
   ref: 'Product',
   localField: '_id',

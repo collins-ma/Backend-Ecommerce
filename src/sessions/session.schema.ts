@@ -7,7 +7,7 @@ export class Session extends Document {
   sessionId: string;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  userId: string;// references User._id
+  userId: string;
 
   @Prop({ required: true })
   refreshToken: string;
@@ -19,7 +19,7 @@ export class Session extends Document {
   ipAddress: string;
 
   @Prop({ required: true })
-  expiresAt: Date; // same lifetime as refresh token
+  expiresAt: Date; 
 }
 
 export const SessionSchema = SchemaFactory.createForClass(Session);

@@ -2,109 +2,116 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Order } from './schema/order.schema';
-import { ShippingAddress } from './schema/shipping-address.schema';
 import { Cart } from 'src/cart/schema/cart.schema';
+import { Product } from 'src/products/schema/product.schema';
 
 @Injectable()
 export class OrderService {
-  constructor(
-    @InjectModel(Order.name) private orderModel: Model<Order>,
-    @InjectModel(Cart.name) private cartModel: Model<Cart>,
-  ) {}
+  constructor(@InjectModel(Order.name) private orderModel: Model<Order>, @InjectModel(Cart.name) private cartModel: Model<Cart>, ) {}
 
-  // 🟢 CREATE - create a new order (used during checkout)
   async createOrder(
-    userId: string,
-   
-    items: { product: Types.ObjectId; quantity: number; priceUSD: number }[],
-    total: number,
-    paymentMethod: 'mpesa' | 'stripe' | 'paypal',
-    shippingAddress: ShippingAddress,
-  ) {
-    const order = new this.orderModel({
-      user: new Types.ObjectId(userId), // ensure it's saved as 
-      shippingAddress,
-      items,
-      total,
-      paymentMethod,
-      status: 'pending',
-    });
+  userId: string,
+  Items:any[],
+  totalKsh: number,
 
-    return order.save();
+  shippingAddress: any,
+) {
+  
+  const cart = await this.cartModel
+    .findOne({ user: new Types.ObjectId(userId) })
+    .populate('items.product');
+
+  if (!cart || cart.items.length === 0) {
+    throw new Error('Cart is empty');
   }
 
-  // 🔵 READ - get all orders (admin)
-  async findAll() {
-    return this.orderModel
-      .find()
-      .populate('items.product', 'name priceUSD') // populate only name and price
-      .exec();
-  }
+ 
+  cart.items = cart.items.filter(item => item.product);
 
-  // 🟣 READ - get orders for a specific user
+  
+  const orderItems = cart.items.map(item => {
+    const product = item.product as Product;
 
-  async findByUser(userId: string) {
-    return this.orderModel
-      .find({ user: new Types.ObjectId(userId) })
-      .populate('user', 'name email')
-      .populate('items.product', 'name priceUSD image')
-      .sort({ createdAt: -1 });
-  }
-   
+    return {
+      product: product._id,
+      quantity: item.quantity,
+      priceksh: product.priceKsh,
+    };
+  });
+
+  const total = orderItems.reduce(
+    (sum, item) => sum + item.priceksh * item.quantity,
+    0,
+  );
+
+  const order = new this.orderModel({
+    user: new Types.ObjectId(userId),
+    items: orderItems,
+    total,
+    paymentMethod: 'mpesa',
+    shippingAddress,
+    status: 'pending',
+  });
+
+
+ 
+  await order.save();
+
   
 
-  // 🟠 READ - get single order by ID
+  return order;
+}
+
+  async findByUser(userId: string) {
+    const usersOrder= await this.orderModel
+      .find({ user: new Types.ObjectId(userId) })
+      .populate('items.product', 'name priceKsh image')
+      .sort({ createdAt: -1 });
+
+      
+
+      return usersOrder
+  }
+
+  async findAll() {
+  return this.orderModel
+    .find()
+    
+}
+
   async findById(orderId: string) {
-    const order = await this.orderModel
-      .findById(orderId)
-      .populate('items.product', 'name priceUSD image');
+    const order = await this.orderModel.findById(orderId).populate('items.product', 'name priceKsh image');
     if (!order) throw new NotFoundException('Order not found');
     return order;
   }
 
-  // 🟡 UPDATE - update order status (admin or webhook)
-  async updateStatus(id: string, status: 'pending' | 'paid' | 'failed') {
-    const updatedOrder = await this.orderModel.findByIdAndUpdate(
-      id,
-      { status },             
-      { new: true, runValidators: false }
-    );
-
-    if (!updatedOrder) {
-      throw new NotFoundException(`Order with id ${id} not found`);
-    }
-
-    return updatedOrder;
+  async updateStatus(orderId: string, status: 'pending' | 'paid' | 'failed') {
+    const updated = await this.orderModel.findByIdAndUpdate(orderId, { status }, { new: true });
+    if (!updated) throw new NotFoundException('Order not found');
+    return updated;
   }
 
-  // 🔴 DELETE - delete an order
-  async delete(orderId: string) {
-    const order = await this.orderModel.findByIdAndDelete(orderId);
-    if (!order) throw new NotFoundException('Order not found');
-    return { message: 'Order deleted successfully' };
-  }
-
-  // ✅ CONFIRM PAYMENT - called when payment gateway confirms success
   async markAsPaid(orderId: string, transactionId: string) {
     const order = await this.orderModel.findById(orderId);
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
+    if (!order) throw new NotFoundException('Order not found');
     order.status = 'paid';
-    (order as any).transactionId = transactionId; // optional
-
-    return await order.save();
+    order.transactionId = transactionId;
+    return order.save();
   }
 
   async failPayment(orderId: string, reason: string) {
     const order = await this.orderModel.findById(orderId);
-    console.log('Failing payment for Order ID:', orderId, 'Reason:', reason);
     if (!order) throw new NotFoundException('Order not found');
-  
     order.status = 'failed';
-    (order as any).failureReason = reason;
-  
-    return await order.save();
+    order.failureReason = reason;
+    return order.save();
+  }
+
+ 
+
+  async getOrderStatus(orderId: string, userId: string) {
+    const order = await this.orderModel.findOne({ _id: orderId, user: new Types.ObjectId(userId) });
+    if (!order) throw new NotFoundException('Order not found');
+    return { status: order.status };
   }
 }

@@ -33,6 +33,7 @@ async getSessions(@Req() req: AuthRequest) {
 
   @Post('logout-current')
   async logoutCurrent(@Req() req: AuthRequest, @Res({ passthrough: true }) res: Response) {
+   
     const userId = req.user._id;
     const currentSessionId = req.user.sessionId;
     return this.sessionService.logoutCurrent(userId, currentSessionId, res);
@@ -59,7 +60,7 @@ async getSessions(@Req() req: AuthRequest) {
     @Req() req: AuthRequest, 
     @Body() body: { userId: string }
   ) {
-    const currentSessionId = req.user.sessionId; // From validated access token
+    const currentSessionId = req.user.sessionId; 
     return this.sessionService.logoutOtherDevices(body.userId, currentSessionId);
   }
 

@@ -8,7 +8,7 @@ import {
   import { ROLES_KEY } from '../decorators/roles.decorators';
   import { Request } from 'express';
   
-  // Extend Request to include `user`
+  
   interface AuthenticatedRequest extends Request {
     user?: { role?: string; [key: string]: any };
   }
@@ -24,7 +24,7 @@ import {
       ]);
   
       if (!requiredRoles || requiredRoles.length === 0) {
-        // No roles required → route is public to authenticated users
+       
         return false
       }
   
@@ -33,12 +33,12 @@ import {
       
 
       if (!user) {
-        throw new ForbiddenException('User not found in request');
+        throw new ForbiddenException('User not found ');
       }
   
       
       if (!user.roles) {
-        throw new ForbiddenException('User role missing in token');
+        throw new ForbiddenException('User role missing ');
       }
   
       // Check if user's role matches any required role

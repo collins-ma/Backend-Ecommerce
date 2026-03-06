@@ -6,13 +6,13 @@ export class CreateProductDto {
   name: string;
 
   @IsString()
-  image: string;
+  image?: string;
 
   @IsNumber()
   @Min(0)
-  priceUSD: number;
+  priceKsh: number;
 
   @IsMongoId()
   @IsNotEmpty()
-  category: string; // references Category _id
+  category: string;
 }

@@ -39,13 +39,13 @@ export class UsersController {
   async resendCode(@Body() body: { email: string }) {
     return this.usersService.resendCode(body.email);
   }
-  // Public create user (normal registration)
+  
   @Post()
   async create(@Body() createUserDto: CreateUserDto): Promise<{message:string}> {
     return this.usersService.create(createUserDto);
   }
 
-  // Admin-only user creation MUST have different route!
+  
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Post('admin')
@@ -63,13 +63,13 @@ export class UsersController {
 
   // Get user by ID
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin','user')
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<User | null> {
     return this.usersService.findById(id);
   }
 
-  // Update user
+
   @Patch(':id')
   async update(
     @Param('id') id: string,
@@ -78,7 +78,7 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-  // Delete user
+  
   @Delete(':id')
   async delete(@Param('id') id: string) {
     return this.usersService.delete(id);

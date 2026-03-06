@@ -13,10 +13,10 @@ export class Order extends Document {
     {
       product: { type: Types.ObjectId, ref: 'Product', required: true },
       quantity: { type: Number, required: true },
-      priceUSD: { type: Number, required: true },
+      priceksh: { type: Number, required: true },
     },
   ])
-  items: { product: Types.ObjectId; quantity: number; priceUSD: number }[];
+  items: { product: Types.ObjectId; quantity: number; priceksh: number }[];
 
   @Prop({ required: true })
   total: number;
@@ -31,7 +31,7 @@ export class Order extends Document {
   status: 'pending' | 'paid' | 'failed';
 
   @Prop({ required: true })
-  paymentMethod: 'mpesa' | 'stripe' | 'paypal';
+  paymentMethod: 'mpesa' 
 
   @Prop({ type: ShippingAddressSchema, required: true })
   shippingAddress: ShippingAddress;

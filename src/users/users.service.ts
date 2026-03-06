@@ -22,19 +22,15 @@ export class UsersService {
     private sessionService: SessionService,
   ) {}
 
-  // ---------------------------
-  // Generate 6-digit verification code
-  // ---------------------------
+  
   private generateVerificationCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
-  // ---------------------------
-  // Create user
-  // ---------------------------
+  
   async create(createUserDto: CreateUserDto) {
     try {
-      // Check duplicates
+     
       const existingUser = await this.userModel.findOne({
         $or: [
           { email: createUserDto.email },
@@ -52,15 +48,15 @@ export class UsersService {
         throw new ConflictException(`User with this ${field} already exists`);
       }
 
-      // Hash password
+  
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
       const code = this.generateVerificationCode();
 
-      // Create user
+    
       const user =  new this.userModel({
         ...createUserDto,
         password: hashedPassword,
-        roles: ['user'], // default role
+        roles: ['user'], 
         verificationCode: code,
         verificationCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
       });
@@ -96,7 +92,7 @@ export class UsersService {
 
       return { message: 'Verification code sent to your email' };
     } catch (error) {
-      console.error('Create User Error:', error);
+      
 
       if (error instanceof ConflictException) throw error;
     
@@ -172,7 +168,7 @@ export class UsersService {
  
     });
 
-    console.log('Resend code email result:', result);
+    
 
     return { message: 'New verification code sent to your email' };
   }
@@ -182,9 +178,7 @@ export class UsersService {
 
   
 
-  // ---------------------------
-  // Create admin user
-  // ---------------------------
+ 
   async createAdminUser(createUserDto: CreateUserDto) {
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
     return this.userModel.create({
@@ -197,18 +191,14 @@ export class UsersService {
 
   
   
-  // ---------------------------
-  // Get all users
-  // ---------------------------
+  
   async findAll(): Promise<User[]> {
     const users = await this.userModel.find().exec();
     if (!users || users.length === 0) throw new NotFoundException('No users found');
     return users;
   }
 
-  // ---------------------------
-  // Update user
-  // ---------------------------
+  
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     if (updateUserDto.password) {
       const salt = await bcrypt.genSalt(10);
@@ -220,43 +210,33 @@ export class UsersService {
     return updated;
   }
 
-  // ---------------------------
-  // Find user by ID
-  // ---------------------------
+ 
   async findById(id: string): Promise<User> {
     const user = await this.userModel.findById(id).exec();
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
-  // ---------------------------
-  // Find by username
-  // ---------------------------
+  
   async findByUsername(username: string): Promise<User> {
     const user = await this.userModel.findOne({ username }) .select('+email  +isVerified +isActive ').exec();
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
-  // ---------------------------
-  // Find by email
-  // ---------------------------
+  
   async findByEmail(email: string): Promise<User> {
     const user = await this.userModel.findOne({ email }).exec();
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
 
-  // ---------------------------
-  // Generic find one
-  // ---------------------------
+ 
   async findOne(query: Record<string, any>): Promise<User | null> {
     return this.userModel.findOne(query).exec();
   }
 
-  // ---------------------------
-  // Delete user
-  // ---------------------------
+  
   async delete(id: string): Promise<User> {
     const deleted = await this.userModel.findByIdAndDelete(id).exec();
     if (!deleted) throw new NotFoundException('User not found');
@@ -273,7 +253,7 @@ export class UsersService {
     user.isActive = false;
     await user.save();
 
-    // Delete all sessions for this user
+    
     await this.sessionService.logoutOtherDevices(userId);
 
     return { message: 'User deactivated successfully' };

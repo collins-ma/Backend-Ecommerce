@@ -13,23 +13,18 @@ export class CategoriesService {
     @InjectModel(Product.name) private productModel: Model<Product>,
   ) {}
 
-  // ✅ Create new category
+  
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
     const category = new this.categoryModel(createCategoryDto);
     return category.save();
   }
 
-  // ✅ Get all categories
+  
   async findAll(): Promise<Category[]> {
     return this.categoryModel.find().exec();
   } 
   
-  // Removed duplicate implementation of findAllWithProducts
-
-
-
-
-  // ✅ Get single category
+  
   async findById(id: string): Promise<Category> {
     const category = await this.categoryModel.findById(id).exec();
     if (!category) {
@@ -38,7 +33,7 @@ export class CategoriesService {
     return category;
   }
 
-  // ✅ Update category
+  
   async update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
     const updatedCategory = await this.categoryModel.findByIdAndUpdate(id, updateCategoryDto, { new: true }).exec();
     if (!updatedCategory) {
@@ -47,7 +42,7 @@ export class CategoriesService {
     return updatedCategory;
   }
 
-  // ✅ Delete category
+  
   async delete(id: string): Promise<{ message: string }> {
     await this.categoryModel.findByIdAndDelete(id).exec();
     return { message: 'Category deleted successfully' };
@@ -63,20 +58,5 @@ export class CategoriesService {
       .exec();
   }
   
-  // ✅ Get categories with products
-//   async findAllWithProducts() {
-//     const categories = await this.categoryModel.find().lean();
-
-//     const categoriesWithProducts = await Promise.all(
-//       categories.map(async (category) => {
-//         const products = await this.productModel
-//           .find({ category: category._id })
-//           .select('name image priceUSD')
-//           .lean();
-//         return { ...category, products };
-//       }),
-//     );
-
-//     return categoriesWithProducts;
-//   }
+ 
 }

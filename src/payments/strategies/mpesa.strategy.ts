@@ -2,74 +2,121 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { PaymentMappingService } from '../payment-mapping.service';
+import { lastValueFrom } from 'rxjs';
 import { MpesaError } from '../../../all-exceptions.filter';
 
 @Injectable()
 export class MpesaStrategy {
+  private readonly baseUrl: string;
+
   constructor(
     private readonly http: HttpService,
     private readonly config: ConfigService,
     private readonly paymentMappingService: PaymentMappingService,
-  ) {}
-
-  private async getAccessToken() {
-    const url =
-      'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
-    const auth = Buffer.from(
-      `${this.config.get('MPESA_CONSUMER_KEY')}:${this.config.get(
-        'MPESA_CONSUMER_SECRET',
-      )}`,
-    ).toString('base64');
-
-    const response = await this.http.axiosRef.get(url, {
-      headers: { Authorization: `Basic ${auth}` },
-    });
-
-    if (!response.data.access_token) {
-      throw new MpesaError('Failed to obtain M-Pesa access token');
-    }
-
-    return response.data.access_token;
+  ) {
+    // Base URL depends on sandbox or production
+    this.baseUrl = this.config.get('MPESA_BASE_URL') || 'https://sandbox.safaricom.co.ke';
   }
 
-  async initiatePayment(phoneNumber: string, amount: number, orderId: string) {
-    const token = await this.getAccessToken();
+  /** =========================
+   *  1️⃣ Get OAuth Token
+   *  Uses Consumer Key + Consumer Secret
+   *  ✅ Returns safe error messages
+   * ========================== */
+  private async getAccessToken(): Promise<string> {
+    const url = `${this.baseUrl}/oauth/v1/generate?grant_type=client_credentials`;
+    const consumerKey = this.config.get<string>('MPESA_CONSUMER_KEY');
+    const consumerSecret = this.config.get<string>('MPESA_CONSUMER_SECRET');
 
-    const shortcode = this.config.get('MPESA_SHORTCODE');
-    const passkey = this.config.get('MPESA_PASSKEY');
-    const timestamp = new Date().toISOString().replace(/\D/g, '').slice(0, 14);
-    const password = Buffer.from(shortcode + passkey + timestamp).toString('base64');
+    const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64');
 
-    const payload = {
-      BusinessShortCode: shortcode,
-      Password: password,
-      Timestamp: timestamp,
-      TransactionType: 'CustomerPayBillOnline',
-      Amount: amount,
-      PartyA: phoneNumber,
-      PartyB: shortcode,
-      PhoneNumber: phoneNumber,
-      CallBackURL: this.config.get('MPESA_CALLBACK_URL'),
-      AccountReference: orderId, // internal order ID
-      TransactionDesc: `Payment for order ${orderId}`,
-    };
+    try {
+      const { data } = await lastValueFrom(
+        this.http.get(url, {
+          headers: { Authorization: `Basic ${auth}` },
+        }),
+      );
 
-    const response = await this.http.axiosRef.post(
-      'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
-      payload,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+      if (!data?.access_token) {
 
-    if (response.data.ResponseCode !== '0') {
-      throw new MpesaError('M-Pesa payment initiation failed.');
+        throw new MpesaError('Payment service is currently unavailable. Please try again later.');
+      }
+
+      return data.access_token;
+    } catch (err: any) {
+    
+      throw new MpesaError('Payment service is currently unavailable. Please try again later.');
     }
+  }
 
-    // Save mapping for failed payment lookup
-    await this.paymentMappingService.create({
-      orderId,
-      checkoutRequestId: response.data.CheckoutRequestID,
-    });
+  
+  private generateTimestamp(): string {
+    const now = new Date();
+    const eatOffset = 3 * 60; 
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const eatTime = new Date(utc + eatOffset * 60000);
 
-    return response.data;
+    return (
+      eatTime.getFullYear().toString() +
+      String(eatTime.getMonth() + 1).padStart(2, '0') +
+      String(eatTime.getDate()).padStart(2, '0') +
+      String(eatTime.getHours()).padStart(2, '0') +
+      String(eatTime.getMinutes()).padStart(2, '0') +
+      String(eatTime.getSeconds()).padStart(2, '0')
+    );
+  }
+
+ 
+  async initiatePayment(phoneNumber: string, amount: number, orderId: string) {
+    try {
+      const token = await this.getAccessToken();
+
+      const shortcode = this.config.get<string>('MPESA_SHORTCODE'); // e.g., 174379 sandbox
+      const passkey = this.config.get<string>('MPESA_PASSKEY');     // sandbox passkey
+      const timestamp = this.generateTimestamp();
+      const password = Buffer.from(`${shortcode}${passkey}${timestamp}`).toString('base64');
+
+      const payload = {
+        BusinessShortCode: shortcode,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: 'CustomerPayBillOnline',
+        Amount: amount,
+        PartyA: phoneNumber,
+        PartyB: shortcode,
+        PhoneNumber: phoneNumber,
+        CallBackURL: this.config.get('MPESA_CALLBACK_URL'),
+        AccountReference: orderId,
+        TransactionDesc: `Payment for order ${orderId}`,
+      };
+
+      
+
+      const { data } = await lastValueFrom(
+        this.http.post(`${this.baseUrl}/mpesa/stkpush/v1/processrequest`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }),
+      );
+
+      if (data?.ResponseCode !== '0') {
+        
+       
+        throw new MpesaError('Payment initiation failed. Please try again.');
+      }
+
+      await this.paymentMappingService.create({
+        orderId,
+        checkoutRequestId: data.CheckoutRequestID,
+      });
+
+      return data;
+    } catch (err: any) {
+     
+      
+      throw new MpesaError('Payment service is currently unavailable. Please try again later.');
+    }
   }
 }

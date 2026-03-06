@@ -1,19 +1,21 @@
 import { Injectable } from '@nestjs/common';
-
-interface Mapping {
-  checkoutRequestId: string;
-  orderId: string;
-}
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { PaymentMapping } from './payment-mapping.schema';
 
 @Injectable()
 export class PaymentMappingService {
-  private mappings: Mapping[] = [];
+  constructor(
+    @InjectModel(PaymentMapping.name)
+    private readonly mappingModel: Model<PaymentMapping>,
+  ) {}
 
-  async create(mapping: Mapping) {
-    this.mappings.push(mapping);
+  async create(mapping: { orderId: string; checkoutRequestId: string }) {
+    const doc = new this.mappingModel(mapping);
+    return doc.save();
   }
 
   async findByCheckoutRequestId(checkoutRequestId: string) {
-    return this.mappings.find(m => m.checkoutRequestId === checkoutRequestId);
+    return this.mappingModel.findOne({ checkoutRequestId }).exec();
   }
 }

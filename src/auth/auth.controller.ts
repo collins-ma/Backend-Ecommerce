@@ -6,6 +6,7 @@ import { ResetPasswordDto } from './reset-password.dto';
 import { Patch, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from './guard/auth.guard';
 import { ChangePasswordDto } from './ChangePasswordDto.dto';
+
 type requestObj={
   user:any
 }
@@ -16,8 +17,7 @@ type requestObj={
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  
-  // ------------------- LOGIN -------------------
+ 
   @Post('login')
   @HttpCode(200)
   async login(
@@ -26,10 +26,10 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response
   ) {
     const user = await this.authService.validateUser(body.username, body.password);
-    return this.authService.login(user, response,req); // sets cookie + returns access token
+    return this.authService.login(user, response,req); 
   }
 
-  // ------------------- REFRESH -------------------
+  
   @Get('refresh')
   @HttpCode(200)
   async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
@@ -40,17 +40,10 @@ export class AuthController {
    
 
     return this.authService.refreshToken(refreshToken, response); 
-    // refresh service will handle expired, invalid, or missing tokens
+    
   }
 
-  // ------------------- LOGOUT -------------------
-  // @Post('logout')
-  // @HttpCode(200)
-  // async logout(@Res({ passthrough: true }) response: Response,   @Req() req: Request) {
-
-  //   const sessionId = req.headers['x-session-id'] as string;
-  //   return this.authService.logout(sessionId, response);
-  // }
+ 
 
   @UseGuards(JwtAuthGuard)
   @Patch('change-password')

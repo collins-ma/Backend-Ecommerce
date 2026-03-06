@@ -33,7 +33,7 @@ export class MpesaCallbackController {
       const mapping = await this.paymentMappingService.findByCheckoutRequestId(
         stkCallback.CheckoutRequestID,
       );
-      orderId = mapping?.orderId;
+      orderId = mapping?.orderId.toString()
     }
 
     const transactionId = stkCallback.CheckoutRequestID;

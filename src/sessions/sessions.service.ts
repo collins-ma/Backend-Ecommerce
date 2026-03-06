@@ -19,7 +19,7 @@ export class SessionService {
     return this.sessionModel.create(data);
   }
 
-  // Get all sessions for a user
+  
   async getUserSessions(userId: string) {
     return this.sessionModel.find({ userId })
       .select('sessionId userAgent ipAddress createdAt expiresAt')
@@ -30,7 +30,6 @@ export class SessionService {
     return this.sessionModel.findOne({ sessionId });
   }
 
-  // Logout current device
   async logoutCurrent( userId:string,  sessionId: string, res: Response) {
     await this.sessionModel.deleteOne({ sessionId , userId });
 
@@ -38,14 +37,14 @@ export class SessionService {
     return { message: 'Logged out from current device' };
   }
 
-  // Logout other devices
+  
   async logoutOtherDevices(userId: string, currentSessionId?: string) {
     await this.sessionModel.deleteMany({ userId, sessionId: { $ne: currentSessionId } });
     return { message: 'Logged out from other devices' };
   }
 
   async logoutSelectedDevices(userId: string, sessionIds: string[], currentSessionId?: string) {
-    // optional: prevent deleting current session
+    
     const filteredSessionIds = sessionIds.filter(id => id !== currentSessionId);
 
     await this.sessionModel.deleteMany({

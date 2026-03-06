@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Product } from './schema/product.schema';
 import { Category } from 'src/categories/schema/category.schema';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+
 @Injectable()
 export class ProductsService {
   constructor(
@@ -12,45 +13,41 @@ export class ProductsService {
     @InjectModel(Category.name) private categoryModel: Model<Category>,
   ) {}
 
-  // ✅ Create a new product
-  async create(createProductDto:CreateProductDto): Promise<Product> {
-    // Validate category existence
-    const categoryExists = await this.categoryModel.findById(createProductDto.category);
-    if (!categoryExists) {
-      throw new NotFoundException('Category not found');
+ 
+  async create(createProductDto: CreateProductDto): Promise<Product> {
+    try {
+      const product = new this.productModel(createProductDto);
+      return await product.save();
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw new InternalServerErrorException(error.message || 'Failed to create product');
     }
-
-    const product = new this.productModel(createProductDto)
-    return product.save();
   }
 
-  // ✅ Get all products (populate category name)
+  
   async findAll(): Promise<Product[]> {
-    return this.productModel.find().select('-category').exec(); // exclude category field
+    return this.productModel.find().select('-category').exec(); 
   }
 
-  async findProducts(category?: string): Promise<any[]> {
-    const filter = category ? { category } : {}; // if category exists, filter by it
-    return this.productModel.find(filter).lean().exec(); // fetch from DB
-  }
+ async findProductsByName(categoryName: string): Promise<Product[]> {
+  if (!categoryName) return this.findAll();
 
-  async findProductsByCategory(): Promise<any[]> {
-    const categories = await this.categoryModel
-      .find()
-      .populate('products') // virtual field
-      .lean({ virtuals: true }) // return plain objects with virtuals
+  const category = await this.categoryModel
+    .findOne({ name: { $regex: `^${categoryName.trim()}$`, $options: 'i' } })
+    .exec();
 
-      .exec();
+  if (!category) return [];
 
-    return categories.map((category) => ({
-      _id: category._id,
-      name: category.name,
-      products: category.products,
-    }));
-  }
+  
+  const categoryId = category._id;
+  const categoryIdStr = category._id.toString();
 
-
-  // ✅ Get product by ID
+  return this.productModel
+    .find({ category: { $in: [categoryId, categoryIdStr] } })
+    .populate('category', 'name')
+    .exec();
+}
+  
   async findById(id: string): Promise<Product> {
     const product = await this.productModel
       .findById(id)
@@ -61,7 +58,7 @@ export class ProductsService {
     return product;
   }
 
-  // ✅ Update product
+ 
   async update(id: string, updateProductDto: UpdateProductDto): Promise<Product> {
     if (updateProductDto.category) {
       const categoryExists = await this.categoryModel.findById(updateProductDto.category);
@@ -78,7 +75,7 @@ export class ProductsService {
     return updated;
   }
 
-  // ✅ Delete product
+  
   async delete(id: string): Promise<{ message: string }> {
     const deleted = await this.productModel.findByIdAndDelete(id).exec();
     if (!deleted) throw new NotFoundException('Product not found');

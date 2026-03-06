@@ -1,7 +1,6 @@
-import { Injectable, UnauthorizedException,NotFoundException , BadRequestException,InternalServerErrorException,ForbiddenException } from '@nestjs/common';
+import { Injectable, UnauthorizedException,NotFoundException , BadRequestException,InternalServerErrorException,ForbiddenException ,HttpException} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from 'src/users/users.service';
-import { HttpException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import type { Response, Request } from 'express';
 import {MailerService} from '@nestjs-modules/mailer';
@@ -24,7 +23,7 @@ export class AuthService {
 
   async validateUser(username: string, password: string) {
     const user = await this.userService.findByUsername(username);
-    console.log('userInfo', user)
+    
     if (user && (await bcrypt.compare(password, user.password))) {
       const { password: _pwd, ...result } = user.toObject();
       return result;
@@ -51,7 +50,7 @@ export class AuthService {
     
 
       const sessionId = uuidv4()
-      const payload = { _id: user._id, roles: user.roles, username: user.username, sessionId };
+      const payload = { _id: user._id, roles: user.roles, email:user.email,  username: user.username, sessionId };
 
 
       const refreshToken = this.jwtService.sign(payload, {
@@ -82,7 +81,7 @@ export class AuthService {
 
       const accessToken = this.jwtService.sign(payload, {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: '30s',
+        expiresIn: '15m',
       });
 
       return { accessToken };
@@ -106,7 +105,7 @@ export class AuthService {
 
       const session = await this.sessionService.findSession(payload.sessionId);
 
-      console.log('session Data',session)
+      
 
 
       if (!session) {
@@ -116,8 +115,13 @@ export class AuthService {
           secure: true,
           sameSite: 'none',
         });
+
+
+         throw new UnauthorizedException(
+    "You are logged out. Please login again"
+  );
       
-       return response.status(401).json({message:"You are logged out.Please login again"})
+      
       }
 
 
@@ -128,14 +132,14 @@ export class AuthService {
 
       
       const accessToken = this.jwtService.sign(
-        { _id: payload._id, roles: payload.roles, username: payload.username, sessionId: payload.sessionId },
-        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '30s' }
+        { _id: payload._id, roles: payload.roles, username: payload.username, email:payload.email, sessionId: payload.sessionId },
+        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '15m' }
       );
 
      
       return { accessToken };
     } catch (err: any) {
-      console.error('Refresh token error:', err);
+     
 
       if (err instanceof UnauthorizedException) {
         throw new UnauthorizedException('Unauthorized');
@@ -255,6 +259,8 @@ export class AuthService {
       resetToken: token,
       resetTokenExpiry: { $gt: new Date() },
     });
+
+    console.log('user found',user)
 
     if (!user) throw new BadRequestException('Invalid or expired token');
 
