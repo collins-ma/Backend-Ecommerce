@@ -68,7 +68,7 @@ export class AuthService {
         refreshToken,
         userAgent: req.headers['user-agent']?.toString() || 'unknown',
         ipAddress: req.ip,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 11 * 60 * 1000),
       });
 
    
@@ -76,7 +76,7 @@ export class AuthService {
         httpOnly: true,
          secure:true,
         sameSite: 'none',
-        maxAge:  10 * 60 * 1000, 
+        maxAge:  11 * 60 * 1000, 
       });
 
       const accessToken = this.jwtService.sign(payload, {
