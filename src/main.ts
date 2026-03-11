@@ -10,7 +10,7 @@ import cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  const allowedOrigins = process.env.FRONTEND_URL?.split(',');
+  const allowedOrigins = process.env.FRONTEND_URL
   
   app.enableCors({
     origin:allowedOrigins,
