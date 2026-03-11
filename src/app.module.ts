@@ -24,7 +24,7 @@ import { SessionModule } from './sessions/sessions.module';
     }),
 
     // MongoDB connection using env variable
-    MongooseModule.forRoot('mongodb+srv://collo:collo254@cluster0.m4osyca.mongodb.net/nestdb?appName=Cluster0'),
+    MongooseModule.forRoot(process.env.DATABASE_URL!),
 
     // MailerModule for sending emails
     MailerModule.forRootAsync({
@@ -33,7 +33,7 @@ import { SessionModule } from './sessions/sessions.module';
         transport: {
           host: config.get('SMTP_HOST'),
           port: Number(config.get('SMTP_PORT')),
-          secure: config.get('SMTP_PORT') === '465', // SSL for Gmail
+          secure: config.get('SMTP_PORT') === 465, // SSL for Gmail
           auth: {
             user: config.get('SMTP_USER'),
             pass: config.get('SMTP_PASS'),
