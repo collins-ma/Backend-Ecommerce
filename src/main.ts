@@ -9,9 +9,11 @@ import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  const allowedOrigins = process.env.FRONTEND_URL?.split(',');
   
   app.enableCors({
-    origin: 'https://shopvista-frontend.onrender.com',
+    origin:allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
