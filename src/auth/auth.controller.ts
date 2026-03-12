@@ -48,7 +48,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Patch('change-password')
   async changePassword(@Req() req: requestObj, @Body() dto: ChangePasswordDto) {
+    
     const userId=req.user._id
+    console.log(userId)
     return this.authService.changePassword(userId, dto);
   }
 
