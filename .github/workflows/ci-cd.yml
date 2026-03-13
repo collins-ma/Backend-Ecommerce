@@ -57,3 +57,4 @@ jobs:
               -H "Authorization: Bearer $RENDER_API_KEY"
           else
             echo "Branch not configured for deployment: ${GITHUB_REF}"
+          fi
