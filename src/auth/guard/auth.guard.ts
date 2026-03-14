@@ -45,7 +45,7 @@ export class JwtAuthGuard implements CanActivate {
    
     const token = normalizedHeader.split(' ')[1];
 
-    console.log(token)
+    
     
     if (!token) {
       throw new UnauthorizedException('Token missing after Bearer');
