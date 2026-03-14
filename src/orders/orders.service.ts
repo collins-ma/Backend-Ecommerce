@@ -101,6 +101,7 @@ export class OrderService {
 
   async failPayment(orderId: string, reason: string) {
     const order = await this.orderModel.findById(orderId);
+    console.log(order)
     if (!order) throw new NotFoundException('Order not found');
     order.status = 'failed';
     order.failureReason = reason;
