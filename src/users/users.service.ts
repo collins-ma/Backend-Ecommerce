@@ -50,6 +50,7 @@ export class UsersService {
 
   
       const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+      console.log(hashedPassword)
       const code = this.generateVerificationCode();
 
     
