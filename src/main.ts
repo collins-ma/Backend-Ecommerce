@@ -11,12 +11,12 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   
-  
-  app.enableCors({
-    origin:["https://shopvista-frontend.onrender.com","https://frontend-staging-n82p.onrender.com" ],
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-  });
+  const origins = process.env.ALLOWED_ORIGIN?.split(',');
+
+app.enableCors({
+  origin: origins,
+  credentials: true,
+});
 
   app.use(cookieParser());
 
