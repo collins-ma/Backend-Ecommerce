@@ -14,6 +14,11 @@ import { Roles } from 'src/auth/decorators/roles.decorators';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
  
+   @Get('test-db-error')
+  async testDbError() {
+    const x: any = null;
+    return x.test; // This will throw a runtime error → status 500
+  }
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Patch(':id/deactivate')
