@@ -16,6 +16,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionModule } from './sessions/sessions.module';
 
+import { SentryModule } from '@sentry/nestjs/setup';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { SessionModule } from './sessions/sessions.module';
 
     // Your existing feature modules
     UsersModule,
+    SentryModule.forRoot(),
     ProductsModule,
     CategoriesModule,
     CartModule,
