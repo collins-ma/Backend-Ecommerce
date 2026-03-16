@@ -4,6 +4,10 @@ import * as dotenv from 'dotenv';
 
 dotenv.config(); 
 
+console.log("SENTRY_DSN:", process.env.SENTRY_DSN);
+console.log("NODE_ENV:", process.env.NODE_ENV);
+
+
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN ,
