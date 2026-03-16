@@ -13,7 +13,7 @@ import { Roles } from 'src/auth/decorators/roles.decorators';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
+ 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Patch(':id/deactivate')
@@ -83,4 +83,6 @@ export class UsersController {
   async delete(@Param('id') id: string) {
     return this.usersService.delete(id);
   }
+
+  
 }
