@@ -55,7 +55,7 @@ export class AuthService {
 
       const refreshToken = this.jwtService.sign(payload, {
         secret: process.env.REFRESH_TOKEN_SECRET,
-        expiresIn: '10m', 
+        expiresIn: '20m', 
       });
 
       
@@ -76,12 +76,12 @@ export class AuthService {
         httpOnly: true,
          secure:true,
         sameSite: 'none',
-        maxAge:  11 * 60 * 1000, 
+        maxAge:  30 * 60 * 1000, 
       });
 
       const accessToken = this.jwtService.sign(payload, {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: '5m',
+        expiresIn: '7m',
       });
 
       return { accessToken };
@@ -133,7 +133,7 @@ export class AuthService {
       
       const accessToken = this.jwtService.sign(
         { _id: payload._id, roles: payload.roles, username: payload.username, email:payload.email, sessionId: payload.sessionId },
-        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '5m' }
+        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '7m' }
       );
 
      
@@ -145,7 +145,7 @@ export class AuthService {
         throw new UnauthorizedException('Unauthorized');
       }
 
-      throw new ForbiddenException('Forbidden')
+      throw new ForbiddenException('forbidden')
 
      
       
