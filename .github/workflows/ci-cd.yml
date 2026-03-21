@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [develop, main]   # CI on PR
   push:
-    branches: [develop, main]   # CD on push
+    branches: [develop, main]   # CI + CD on push
 
 jobs:
 
@@ -21,17 +21,18 @@ jobs:
           node-version: 24.13.1
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci   # ✅ better than npm install
 
       - name: Build project
         run: npm run build
 
-  # 2️⃣ CD: Deploy after merge/push
+  # 2️⃣ CD: Deploy ONLY on push (not PR)
   cd:
     runs-on: ubuntu-latest
     needs: ci
+    if: github.event_name == 'push'   # ✅ THIS IS THE FIX
+
     steps:
-      # ✅ Debug step to ensure CD is running
       - name: Debug Info
         run: |
           echo "Event name: $GITHUB_EVENT_NAME"
@@ -48,11 +49,11 @@ jobs:
           RENDER_PRODUCTION_SERVICE_ID: ${{ secrets.RENDER_PRODUCTION_SERVICE_ID }}
         run: |
           if [ "${GITHUB_REF}" == "refs/heads/develop" ]; then
-            echo "Deploying to Render STAGING service..."
+            echo "Deploying to STAGING..."
             curl -X POST "https://api.render.com/v1/services/${RENDER_STAGING_SERVICE_ID}/deploys" \
               -H "Authorization: Bearer $RENDER_API_KEY"
           elif [ "${GITHUB_REF}" == "refs/heads/main" ]; then
-            echo "Deploying to Render PRODUCTION service..."
+            echo "Deploying to PRODUCTION..."
             curl -X POST "https://api.render.com/v1/services/${RENDER_PRODUCTION_SERVICE_ID}/deploys" \
               -H "Authorization: Bearer $RENDER_API_KEY"
           else
