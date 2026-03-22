@@ -83,7 +83,7 @@ export class AuthService {
 
       const accessToken = this.jwtService.sign(payload, {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: '10m',
+        expiresIn: '5m',
       })
 
 
@@ -137,7 +137,7 @@ export class AuthService {
       const accessToken = this.jwtService.sign(
         { _id: payload._id, roles: payload.roles, username: payload.username, email:payload.email, sessionId: payload.sessionId },
 
-        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '10m' }
+        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '5m' }
       )
 
        
