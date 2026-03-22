@@ -15,6 +15,9 @@ export class CartController {
   async add(@Req() req: any, @Body() dto: AddToCartDto) {
     
     const userId = req.user._id;
+
+    console.log("debug userId:",userId)
+
     return this.cartService.addToCart(userId, dto.productId, dto.quantity);
 
   }

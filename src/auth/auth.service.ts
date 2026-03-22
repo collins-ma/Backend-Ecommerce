@@ -55,7 +55,7 @@ export class AuthService {
 
       const refreshToken = this.jwtService.sign(payload, {
         secret: process.env.REFRESH_TOKEN_SECRET,
-        expiresIn: '10m', 
+        expiresIn: '7d', 
       });
 
       
@@ -68,7 +68,7 @@ export class AuthService {
         refreshToken,
         userAgent: req.headers['user-agent']?.toString() || 'unknown',
         ipAddress: req.ip,
-        expiresAt: new Date(Date.now() + 11 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 7*24*60 * 60 * 1000),
       });
 
    
@@ -76,13 +76,16 @@ export class AuthService {
         httpOnly: true,
          secure:true,
         sameSite: 'none',
-        maxAge:  11 * 60 * 1000, 
+
+        maxAge:7*24*60 * 60 * 1000, 
+
       });
 
       const accessToken = this.jwtService.sign(payload, {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: '3m',
-      });
+        expiresIn: '5m',
+      })
+
 
       return { accessToken };
     } catch (err) {
@@ -133,8 +136,11 @@ export class AuthService {
       
       const accessToken = this.jwtService.sign(
         { _id: payload._id, roles: payload.roles, username: payload.username, email:payload.email, sessionId: payload.sessionId },
-        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '3m' }
-      );
+
+        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '5m' }
+      )
+
+       
 
      
       return { accessToken };
@@ -145,7 +151,7 @@ export class AuthService {
         throw new UnauthorizedException('Unauthorized');
       }
 
-      throw new ForbiddenException('Forbidden')
+      throw new ForbiddenException('forbidden')
 
      
       

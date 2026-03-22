@@ -13,7 +13,12 @@ import { Roles } from 'src/auth/decorators/roles.decorators';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
-
+ 
+   @Get('test-db-error')
+  async testDbError() {
+    const x: any = null;
+    return x.test; // This will throw a runtime error → status 500
+  }
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Patch(':id/deactivate')
@@ -83,4 +88,6 @@ export class UsersController {
   async delete(@Param('id') id: string) {
     return this.usersService.delete(id);
   }
+
+  
 }
