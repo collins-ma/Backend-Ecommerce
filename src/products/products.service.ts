@@ -18,9 +18,9 @@ export class ProductsService {
     try {
       const product = new this.productModel(createProductDto);
       return await product.save();
-    } catch (error) {
+    } catch (error:any) {
       console.error('Error creating product:', error);
-      throw new InternalServerErrorException(error.message || 'Failed to create product');
+      throw new InternalServerErrorException(error.message  || 'Failed to create product');
     }
   }
 

@@ -5,17 +5,17 @@ import { Document } from 'mongoose';
 export class User extends Document {
   @Prop({ required: true })
 
-  username: string;
+  username!: string;
 
   @Prop({ required: true })
-  email: string;
+  email!: string;
 
 
   @Prop({ required: true  })
-  password: string;
+  password!: string;
 
   @Prop({ unique: true }) 
-  phoneNumber: string;
+  phoneNumber!: string;
 
   @Prop()
   resetToken?: string;
@@ -24,20 +24,20 @@ export class User extends Document {
   resetTokenExpiry?: Date;
 
   @Prop({ type: [String], default: ['user'] })
-  roles:[String]
+  roles!:[String]
 
   @Prop({default:false})
-  isVerified:boolean;
+  isVerified!:boolean;
 
   @Prop({ default: true })
-  isActive: boolean;
+  isActive!: boolean;
   
   @Prop()
 
-  verificationCode: string;
+  verificationCode!: string;
 
   @Prop({type:Date, default:null})
-  verificationCodeExpires: Date|null;
+  verificationCodeExpires!: Date|null;
 
   
 

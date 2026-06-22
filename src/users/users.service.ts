@@ -40,6 +40,8 @@ export class UsersService {
       });
 
       if (existingUser) {
+
+        console.log('existing user',existingUser)
         let field = 'details';
         if (existingUser.email === createUserDto.email) field = 'email';
         else if (existingUser.username === createUserDto.username) field = 'username';
@@ -92,7 +94,7 @@ export class UsersService {
       
 
       return { message: 'Verification code sent to your email' };
-    } catch (error) {
+    } catch (error:any) {
       
 
       if (error instanceof ConflictException) throw error;
