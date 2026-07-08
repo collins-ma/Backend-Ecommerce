@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable,BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Category } from './schema/category.schema';
@@ -21,14 +21,16 @@ export class CategoriesService {
 
   
   async findAll(): Promise<Category[]> {
-    return this.categoryModel.find().exec();
+    const result=  await this.categoryModel.find().exec();
+
+    return result
   } 
   
   
   async findById(id: string): Promise<Category> {
     const category = await this.categoryModel.findById(id).exec();
     if (!category) {
-      throw new Error(`Category with ID ${id} not found`);
+      throw new BadRequestException(`Category with ID ${id} not found`);
     }
     return category;
   }
@@ -37,7 +39,7 @@ export class CategoriesService {
   async update(id: string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
     const updatedCategory = await this.categoryModel.findByIdAndUpdate(id, updateCategoryDto, { new: true }).exec();
     if (!updatedCategory) {
-      throw new Error(`Category with ID ${id} not found`);
+      throw new BadRequestException(`Category with ID ${id} not found`);
     }
     return updatedCategory;
   }

@@ -25,7 +25,7 @@ import {
   
       if (!requiredRoles || requiredRoles.length === 0) {
        
-        return false
+        return true
       }
   
       const request = context.switchToHttp().getRequest<AuthenticatedRequest>();

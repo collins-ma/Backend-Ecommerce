@@ -25,7 +25,7 @@ import { SentryModule } from '@sentry/nestjs/setup';
     }),
 
     // MongoDB connection using env variable
-    MongooseModule.forRoot(process.env.DATABASE_URL!),
+    MongooseModule.forRoot(process.env.DATABASE_URL !),
 
     // MailerModule for sending emails
     MailerModule.forRootAsync({

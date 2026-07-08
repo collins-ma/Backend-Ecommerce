@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { PaymentMappingService } from '../payment-mapping.service';
 import { lastValueFrom } from 'rxjs';
-import { MpesaError } from '../../../all-exceptions.filter';
+
 
 @Injectable()
 export class MpesaStrategy {
@@ -39,13 +39,13 @@ export class MpesaStrategy {
 
       if (!data?.access_token) {
 
-        throw new MpesaError('Payment service is currently unavailable. Please try again later.');
+        throw new BadGatewayException('Payment service is currently unavailable. Please try again later.');
       }
 
       return data.access_token;
     } catch (err: any) {
     
-      throw new MpesaError('Payment service is currently unavailable. Please try again later.');
+      throw new BadGatewayException('Payment service is currently unavailable. Please try again later.');
     }
   }
 
@@ -104,7 +104,7 @@ export class MpesaStrategy {
       if (data?.ResponseCode !== '0') {
         
        
-        throw new MpesaError('Payment initiation failed. Please try again.');
+        throw new BadGatewayException('Payment initiation failed. Please try again.');
       }
 
       await this.paymentMappingService.create({
@@ -116,7 +116,7 @@ export class MpesaStrategy {
     } catch (err: any) {
      
       
-      throw new MpesaError('Payment service is currently unavailable. Please try again later.');
+      throw new BadGatewayException('Payment service is currently unavailable. Please try again later.');
     }
   }
 }

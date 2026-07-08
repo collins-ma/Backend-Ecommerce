@@ -4,12 +4,14 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
-
-  
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
-
+import {
+  TokenExpiredError,
+  JsonWebTokenError,
+  NotBeforeError,
+} from 'jsonwebtoken';
 
 interface AuthenticatedRequest extends Request {
   user?: any;
@@ -22,7 +24,6 @@ export class JwtAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
 
-   
     const rawHeader =
       request.headers['authorization'] || request.headers['Authorization'];
 
@@ -30,40 +31,41 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Authorization header missing');
     }
 
-    
-    const headerValue = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+    const headerValue = Array.isArray(rawHeader)
+      ? rawHeader[0]
+      : rawHeader;
+
     const normalizedHeader = headerValue.trim().replace(/\s+/g, ' ');
 
-  
-
-  
-    
     if (!normalizedHeader.startsWith('Bearer ')) {
       throw new UnauthorizedException('Authorization header invalid');
     }
 
-   
     const token = normalizedHeader.split(' ')[1];
 
-    
-    
     if (!token) {
       throw new UnauthorizedException('Token missing after Bearer');
     }
 
     try {
-      
       const payload = await this.jwtService.verifyAsync(token, {
         secret: process.env.ACCESS_TOKEN_SECRET,
       });
 
-      
       request.user = payload;
 
       return true;
     } catch (err) {
-      
-      throw new ForbiddenException('Invalid or expired token');
+      if (
+        err instanceof TokenExpiredError ||
+        err instanceof JsonWebTokenError ||
+        err instanceof NotBeforeError
+      ) {
+        throw new ForbiddenException('Invalid or expired token');
+      }
+
+      // Let unexpected errors bubble up to the global exception filter
+      throw err;
     }
   }
 }

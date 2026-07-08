@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Product } from './schema/product.schema';
@@ -15,13 +15,10 @@ export class ProductsService {
 
  
   async create(createProductDto: CreateProductDto): Promise<Product> {
-    try {
+    
       const product = new this.productModel(createProductDto);
       return await product.save();
-    } catch (error:any) {
-      console.error('Error creating product:', error);
-      throw new InternalServerErrorException(error.message  || 'Failed to create product');
-    }
+    
   }
 
   

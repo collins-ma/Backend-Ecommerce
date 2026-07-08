@@ -9,6 +9,11 @@ import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid'; 
 import { SessionService } from 'src/sessions/sessions.service';
 import { ChangePasswordDto } from './ChangePasswordDto.dto';
+import {
+  TokenExpiredError,
+  JsonWebTokenError,
+  NotBeforeError,
+} from "jsonwebtoken";
 
 
 @Injectable()
@@ -33,7 +38,7 @@ export class AuthService {
 
   
   async login(user: any, response: Response, req: Request) {
-    try {
+    
 
       if (!user.isActive) {
         throw new UnauthorizedException('Account deactivated');
@@ -55,7 +60,7 @@ export class AuthService {
 
       const refreshToken = this.jwtService.sign(payload, {
         secret: process.env.REFRESH_TOKEN_SECRET,
-        expiresIn: '7d', 
+        expiresIn: '3m', 
       });
 
       
@@ -77,87 +82,87 @@ export class AuthService {
          secure:true,
         sameSite: 'none',
 
-        maxAge:7*24*60 * 60 * 1000, 
+        maxAge:3* 60 * 1000, 
 
       });
 
       const accessToken = this.jwtService.sign(payload, {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: '10m',
+        expiresIn: '1m',
       })
 
 
       return { accessToken };
-    } catch (err) {
+    
 
-      if (err instanceof HttpException) throw err;
-      
-      throw new InternalServerErrorException('Login failed');
+   
     }
-  }
 
-  async refreshToken(refreshToken: string, response:Response) {
-    try {
-      if (!refreshToken) {
-        throw new UnauthorizedException('Unauthorized ');
-      }
 
-      const payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.REFRESH_TOKEN_SECRET,
+async refreshToken(refreshToken: string, response: Response) {
+  try {
+    if (!refreshToken) {
+      throw new UnauthorizedException("your session has expired.Please login again");
+    }
+
+    const payload = this.jwtService.verify(refreshToken, {
+      secret: process.env.REFRESH_TOKEN_SECRET,
+    });
+
+    const session = await this.sessionService.findSession(payload.sessionId);
+
+    if (!session) {
+      response.clearCookie("jwt", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
       });
 
-      const session = await this.sessionService.findSession(payload.sessionId);
-
-      
-
-
-      if (!session) {
-       
-        response.clearCookie('jwt', {
-          httpOnly: true,
-          secure: true,
-          sameSite: 'none',
-        });
-
-
-         throw new UnauthorizedException(
-    "You are logged out. Please login again"
-  );
-      
-      
-      }
-
-
-
-
-      
-
-
-      
-      const accessToken = this.jwtService.sign(
-        { _id: payload._id, roles: payload.roles, username: payload.username, email:payload.email, sessionId: payload.sessionId },
-
-        { secret: process.env.ACCESS_TOKEN_SECRET, expiresIn: '10m' }
-      )
-
-       
-
-     
-      return { accessToken };
-    } catch (err: any) {
-     
-
-      if (err instanceof UnauthorizedException) {
-        throw new UnauthorizedException('Unauthorized');
-      }
-
-      throw new ForbiddenException('forbidden')
-
-     
-      
+      throw new UnauthorizedException(
+        "You are logged out. Please login again"
+      );
     }
-  }
 
+    const accessToken = this.jwtService.sign(
+      {
+        _id: payload._id,
+        roles: payload.roles,
+        username: payload.username,
+        email: payload.email,
+        sessionId: payload.sessionId,
+      },
+      {
+        secret: process.env.ACCESS_TOKEN_SECRET,
+        expiresIn: "1m",
+      }
+    );
+
+    return { accessToken };
+
+  } catch (err) {
+
+    // Preserve the HTTP exceptions you intentionally threw
+    if (err instanceof UnauthorizedException) {
+      throw err;
+    }
+
+    // Refresh token expired
+    if (err instanceof TokenExpiredError) {
+      throw new ForbiddenException("your has session has expired.Please login again");
+    }
+
+    // Invalid or malformed refresh token
+    if (
+      err instanceof JsonWebTokenError ||
+      err instanceof NotBeforeError
+    ) {
+      throw new ForbiddenException("Invalid refresh token");
+    }
+
+    // Let unexpected errors bubble up
+    throw err;
+  }
+}
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
     // 1. Get the user
