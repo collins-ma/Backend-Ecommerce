@@ -82,7 +82,7 @@ export class AuthService {
          secure:true,
         sameSite: 'none',
 
-        maxAge:3* 60 * 1000, 
+        maxAge:7*24*60* 60 * 1000, 
 
       });
 
