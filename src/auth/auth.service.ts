@@ -60,7 +60,7 @@ export class AuthService {
 
       const refreshToken = this.jwtService.sign(payload, {
         secret: process.env.REFRESH_TOKEN_SECRET,
-        expiresIn: '3m', 
+        expiresIn: '7d', 
       });
 
       
@@ -88,7 +88,7 @@ export class AuthService {
 
       const accessToken = this.jwtService.sign(payload, {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: '1m',
+        expiresIn: '15m',
       })
 
 
@@ -133,7 +133,7 @@ async refreshToken(refreshToken: string, response: Response) {
       },
       {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: "1m",
+        expiresIn: "15m",
       }
     );
 
