@@ -34,8 +34,8 @@ export class ProductsController {
 
   ) {}
 
-  // ✅ All authenticated users can view products
-  @UseGuards(JwtAuthGuard)
+  // // ✅ All authenticated users can view products
+  // @UseGuards(JwtAuthGuard)
   
   @Get()
 async findAll(@Query('category') category?: string): Promise<Product[]> {
