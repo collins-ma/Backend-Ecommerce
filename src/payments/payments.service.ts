@@ -5,7 +5,8 @@ import { MpesaStrategy } from './strategies/mpesa.strategy';
 import { ShippingAddressDto } from './payments.dto';
 import { Types } from 'mongoose';
 import { Product } from 'src/products/schema/product.schema';
-
+import { PaymentMethod } from 'src/orders/enums/payment-method.enum';
+import { PaymentStatus } from 'src/orders/enums/payment-status.enum';
 @Injectable()
 export class PaymentsService {
   constructor(
@@ -15,13 +16,21 @@ export class PaymentsService {
   ) {}
 
   
-   
-  async initiateCart(
-    userId: string,
-    phoneNumber: string,
-    shippingAddress: ShippingAddressDto,
-  ) {
-    if (!phoneNumber) throw new BadRequestException('Phone number is required for M-Pesa');
+ async initiateCart(
+  userId: string,
+  paymentMethod: PaymentMethod,
+  shippingAddress: ShippingAddressDto,
+  phoneNumber?: string,
+) {
+
+  if (
+  paymentMethod === PaymentMethod.MPESA &&
+  !phoneNumber
+) {
+  throw new BadRequestException(
+    'Phone number is required for M-Pesa payment.',
+  );
+}
 
     
     const cart = await this.cartService.getCart(userId);
@@ -29,70 +38,92 @@ export class PaymentsService {
       throw new BadRequestException('Cart is empty');
     }
 
-    
-    let totalKsh = 0;
-    const orderItems = cart.items
-      .filter(i => i.product) 
-      .map(i => {
-        const product = i.product as Product;
-        totalKsh += product.priceKsh * i.quantity;
-        return {
-          product: new Types.ObjectId(product._id.toString()),
-          quantity: i.quantity,
-          priceKsh: product.priceKsh,
-        };
-      });
-
    
     const order = await this.ordersService.createOrder(
-      userId,
-      orderItems,
-      totalKsh,
-      shippingAddress,
-    );
+  userId,
 
-   
-    const paymentResponse = await this.mpesa.initiatePayment(
-      phoneNumber,
-      totalKsh,
-      order._id.toString(),
-    );
+  paymentMethod,
+  shippingAddress,
+);
+  
+
+if (paymentMethod === PaymentMethod.MPESA) {
+  const paymentResponse = await this.mpesa.initiatePayment(
+    phoneNumber!,
+    order.total,
+    order._id.toString(),
+  );
+
+  return {
+    orderId: order._id.toString(),
+    method: paymentMethod,
+    currency: 'KES',
+    totalToPay: order.total,
+    paymentResponse,
+    status: order.paymentStatus,
+  };
+}
+
+// Cash on Delivery
+await this.cartService.clearCart(userId);
+
+return {
+  orderId: order._id.toString(),
+  method: paymentMethod,
+  currency: 'KES',
+  totalToPay: order.total,
+  status: order.paymentStatus,
+  message: 'Order placed successfully. Pay when your order is delivered.',
+};
+}
 
     
-    return {
-      orderId: order._id.toString(),
-      method: 'mpesa',
-      currency: 'KES',
-      totalToPay: totalKsh,
-      paymentResponse,
-      status: 'pending',
-    };
+async confirmPayment(
+  orderId: string,
+  result: {
+    success: boolean;
+    transactionId?: string;
+    reason?: string;
+  },
+) {
+  const order = await this.ordersService.findById(orderId);
+
+  if (!order) {
+    throw new BadRequestException('Order not found');
   }
 
-  async confirmPayment(
-    orderId: string,
-    result: { success: boolean; transactionId?: string; reason?: string },
-  ) {
-    const order = await this.ordersService.findById(orderId);
-    if (!order) throw new BadRequestException('Order not found');
-
-    
-    if (order.status !== 'pending') {
-      
-      return order;
-    }
-
-    if (result.success) {
-      if (!result.transactionId) throw new BadRequestException('Transaction ID missing for successful payment');
-
-      const updatedOrder = await this.ordersService.markAsPaid(orderId, result.transactionId);
-
-      
-      await this.cartService.clearCart(order.user.toString());
-
-      return updatedOrder;
-    } else {
-      return this.ordersService.failPayment(orderId, result.reason ?? 'Unknown error');
-    }
+  // Ignore duplicate callbacks
+  if (order.paymentStatus !== PaymentStatus.PENDING) {
+    return order;
   }
+
+  if (result.success) {
+    if (!result.transactionId) {
+      throw new BadRequestException(
+        'Transaction ID missing for successful payment.',
+      );
+    }
+
+    const updatedOrder =
+      await this.ordersService.markAsPaid(
+        orderId,
+        result.transactionId,
+      );
+
+    // Customer has paid successfully.
+    // Safe to clear the cart.
+    await this.cartService.clearCart(
+      order.user.toString(),
+    );
+
+    return updatedOrder;
+  }
+
+  return this.ordersService.failPayment(
+    orderId,
+    result.reason ?? 'Unknown payment error.',
+  );
+}
+
+
 }

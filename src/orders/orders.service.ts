@@ -1,20 +1,20 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Order } from './schema/order.schema';
 import { Cart } from 'src/cart/schema/cart.schema';
 import { Product } from 'src/products/schema/product.schema';
-
+import { PaymentMethod } from './enums/payment-method.enum';
+import { PaymentStatus } from './enums/payment-status.enum';
+import { OrderStatus } from './enums/order-status.enum';
+import { ShippingAddress } from './schema/shipping-address.schema';
 @Injectable()
 export class OrderService {
   constructor(@InjectModel(Order.name) private orderModel: Model<Order>, @InjectModel(Cart.name) private cartModel: Model<Cart>, ) {}
-
-  async createOrder(
+async createOrder(
   userId: string,
-  Items:any[],
-  totalKsh: number,
-
-  shippingAddress: any,
+  paymentMethod: PaymentMethod,
+  shippingAddress: ShippingAddress,
 ) {
   
   const cart = await this.cartModel
@@ -44,16 +44,20 @@ export class OrderService {
     0,
   );
 
-  const order = new this.orderModel({
-    user: new Types.ObjectId(userId),
-    items: orderItems,
-    total,
-    paymentMethod: 'mpesa',
-    shippingAddress,
-    status: 'pending',
-  });
+  
+const order = new this.orderModel({
+  user: new Types.ObjectId(userId),
+  items: orderItems,
+  total,
 
+  paymentMethod,
 
+  paymentStatus: PaymentStatus.PENDING,
+
+  orderStatus: OrderStatus.PENDING,
+
+  shippingAddress,
+});
  
   await order.save();
 
@@ -85,34 +89,167 @@ export class OrderService {
     return order;
   }
 
-  async updateStatus(orderId: string, status: 'pending' | 'paid' | 'failed') {
-    const updated = await this.orderModel.findByIdAndUpdate(orderId, { status }, { new: true });
-    if (!updated) throw new NotFoundException('Order not found');
-    return updated;
+  async updateOrderStatus(
+  orderId: string,
+  newStatus: OrderStatus,
+) {
+  const order = await this.orderModel.findById(orderId);
+
+  if (!order) {
+    throw new NotFoundException('Order not found');
   }
 
-  async markAsPaid(orderId: string, transactionId: string) {
-    const order = await this.orderModel.findById(orderId);
-    if (!order) throw new NotFoundException('Order not found');
-    order.status = 'paid';
+  // Prevent processing unpaid M-Pesa orders
+  if (
+    order.paymentMethod === PaymentMethod.MPESA &&
+    order.paymentStatus !== PaymentStatus.PAID &&
+    newStatus !== OrderStatus.CANCELLED
+  ) {
+    throw new BadRequestException(
+      'This order cannot be processed because payment has not been completed.',
+    );
+  }
+
+  const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+    [OrderStatus.PENDING]: [
+      OrderStatus.CONFIRMED,
+    ],
+
+    [OrderStatus.CONFIRMED]: [
+      OrderStatus.PROCESSING,
+    ],
+
+    [OrderStatus.PROCESSING]: [
+      OrderStatus.SHIPPED,
+    ],
+
+    [OrderStatus.SHIPPED]: [
+      OrderStatus.DELIVERED,
+    ],
+
+    [OrderStatus.DELIVERED]: [],
+
+    [OrderStatus.CANCELLED]: [],
+  };
+
+  const allowed =
+    allowedTransitions[order.orderStatus];
+
+  if (!allowed.includes(newStatus)) {
+    throw new BadRequestException(
+      `Cannot change order status from ${order.orderStatus} to ${newStatus}.`,
+    );
+  }
+
+  order.orderStatus = newStatus;
+
+  if (newStatus === OrderStatus.DELIVERED) {
+    order.deliveredAt = new Date();
+  }
+
+  await order.save();
+
+  return order;
+}
+
+  async markAsPaid(
+  orderId: string,
+  transactionId?: string,
+) {
+  const order = await this.orderModel.findById(orderId);
+
+  if (!order) {
+    throw new NotFoundException('Order not found');
+  }
+
+  order.paymentStatus = PaymentStatus.PAID;
+
+  if (transactionId) {
     order.transactionId = transactionId;
-    return order.save();
   }
 
-  async failPayment(orderId: string, reason: string) {
-    const order = await this.orderModel.findById(orderId);
-    console.log(order)
-    if (!order) throw new NotFoundException('Order not found');
-    order.status = 'failed';
-    order.failureReason = reason;
-    return order.save();
-  }
+  return order.save();
+}  
 
  
+async failPayment(orderId: string, reason: string) {
+  const order = await this.orderModel.findById(orderId);
+
+  if (!order) {
+    throw new NotFoundException('Order not found');
+  }
+
+  if (order.paymentStatus === PaymentStatus.PAID) {
+    throw new BadRequestException('Order has already been paid.');
+  }
+
+  order.paymentStatus = PaymentStatus.FAILED;
+  order.failureReason = reason;
+
+  return order.save();
+}
+
+ 
+async cancelOrder(
+  orderId: string,
+  userId: string,
+  reason?: string,
+) {
+  const order = await this.orderModel.findOne({
+    _id: orderId,
+    user: new Types.ObjectId(userId),
+  });
+
+  if (!order) {
+    throw new NotFoundException('Order not found');
+  }
+
+  // Only allow cancellation before the order starts processing
+  if (
+    order.orderStatus !== OrderStatus.PENDING &&
+    order.orderStatus !== OrderStatus.CONFIRMED
+  ) {
+    throw new BadRequestException(
+      `Order cannot be cancelled because it is currently ${order.orderStatus}.`,
+    );
+  }
+
+  // Cancel the order
+  order.orderStatus = OrderStatus.CANCELLED;
+  order.cancelledAt = new Date();
+
+  if (reason?.trim()) {
+    order.cancellationReason = reason.trim();
+  }
+
+  // Handle payment status
+  switch (order.paymentStatus) {
+    case PaymentStatus.PAID:
+      // Customer has already paid.
+      // Admin should process the refund.
+      order.paymentStatus = PaymentStatus.REFUND_PENDING;
+      break;
+
+    case PaymentStatus.PENDING:
+    case PaymentStatus.FAILED:
+      // Nothing to refund.
+      break;
+
+    case PaymentStatus.REFUND_PENDING:
+    case PaymentStatus.REFUNDED:
+      // Leave as is.
+      break;
+  }
+
+  await order.save();
+
+  return order;
+}
+
 
   async getOrderStatus(orderId: string, userId: string) {
     const order = await this.orderModel.findOne({ _id: orderId, user: new Types.ObjectId(userId) });
     if (!order) throw new NotFoundException('Order not found');
-    return { status: order.status };
+    return { status: order.paymentStatus };
   }
 }

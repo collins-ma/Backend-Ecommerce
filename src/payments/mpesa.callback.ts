@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, NotFoundException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { PaymentMappingService } from './payment-mapping.service';
 
@@ -36,7 +36,17 @@ export class MpesaCallbackController {
       orderId = mapping?.orderId.toString()
     }
 
-    const transactionId = stkCallback.CheckoutRequestID;
+    if (!orderId) {
+  
+      throw new NotFoundException("Order mapping not found")
+}
+
+
+    const receiptItem = metadataItems.find(
+  (item: any) => item.Name === 'MpesaReceiptNumber',
+);
+
+const transactionId = receiptItem?.Value;
     const resultCode = stkCallback.ResultCode;
     const resultDesc = stkCallback.ResultDesc;
 

@@ -4,16 +4,16 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 @Schema()
 export class ShippingAddress {
   @Prop({ required: true })
-  name: string;
+  name!: string;
 
   @Prop({ required: true })
-  street: string;
+  street!: string;
 
   @Prop({ required: true })
-  city: string;
+  city!: string;
 
   @Prop({ required: true })
-  zip: string;
+  zip!: string;
 
   @Prop()
   phone?: string;

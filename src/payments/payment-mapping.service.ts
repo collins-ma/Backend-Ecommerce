@@ -10,11 +10,20 @@ export class PaymentMappingService {
     private readonly mappingModel: Model<PaymentMapping>,
   ) {}
 
-  async create(mapping: { orderId: string; checkoutRequestId: string }) {
-    const doc = new this.mappingModel(mapping);
-    return doc.save();
-  }
-
+ 
+async create(mapping: {
+  orderId: string;
+  checkoutRequestId: string;
+}) {
+  return this.mappingModel.findOneAndUpdate(
+    { checkoutRequestId: mapping.checkoutRequestId },
+    mapping,
+    {
+      new: true,
+      upsert: true,
+    },
+  );
+}
   async findByCheckoutRequestId(checkoutRequestId: string) {
     return this.mappingModel.findOne({ checkoutRequestId }).exec();
   }

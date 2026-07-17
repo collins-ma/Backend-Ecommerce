@@ -1,40 +1,110 @@
-// src/orders/order.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { ShippingAddress, ShippingAddressSchema } from './shipping-address.schema';
-import { Product } from 'src/products/schema/product.schema';
+import {
+  ShippingAddress,
+  ShippingAddressSchema,
+} from './shipping-address.schema';
+
+import { PaymentMethod } from '../enums/payment-method.enum';
+import { PaymentStatus } from '../enums/payment-status.enum';
+import { OrderStatus } from '../enums/order-status.enum';
 
 @Schema({ timestamps: true })
 export class Order extends Document {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  user: Types.ObjectId;
+  // Customer
+  @Prop({
+    type: Types.ObjectId,
+    ref: 'User',
+    required: true,
+  })
+  user!: Types.ObjectId;
 
+  // Products in the order
   @Prop([
     {
-      product: { type: Types.ObjectId, ref: 'Product', required: true },
-      quantity: { type: Number, required: true },
-      priceksh: { type: Number, required: true },
+      product: {
+        type: Types.ObjectId,
+        ref: 'Product',
+        required: true,
+      },
+      quantity: {
+        type: Number,
+        required: true,
+        min: 1,
+      },
+      priceksh: {
+        type: Number,
+        required: true,
+        min: 0,
+      },
     },
   ])
-  items: { product: Types.ObjectId; quantity: number; priceksh: number }[];
+  items!: {
+    product: Types.ObjectId;
+    quantity: number;
+    priceksh: number;
+  }[];
 
-  @Prop({ required: true })
-  total: number;
+  // Total amount
+  @Prop({
+    required: true,
+    min: 0,
+  })
+  total!: number;
 
+  // Payment method
+  @Prop({
+    type: String,
+    enum: PaymentMethod,
+    required: true,
+  })
+  paymentMethod!: PaymentMethod;
+
+  // Payment status
+  @Prop({
+    type: String,
+    enum: PaymentStatus,
+    default: PaymentStatus.PENDING,
+  })
+  paymentStatus!: PaymentStatus;
+
+  // Order status
+  @Prop({
+    type: String,
+    enum: OrderStatus,
+    default: OrderStatus.PENDING,
+  })
+  orderStatus!: OrderStatus;
+
+  // Payment transaction reference
   @Prop()
   transactionId?: string;
 
+  // Payment failure reason
   @Prop()
   failureReason?: string;
 
-  @Prop({ default: 'pending' })
-  status: 'pending' | 'paid' | 'failed';
+  // Shipping address
+  @Prop({
+    type: ShippingAddressSchema,
+    required: true,
+  })
+  shippingAddress!: ShippingAddress;
 
-  @Prop({ required: true })
-  paymentMethod: 'mpesa' 
+  // Courier tracking number
+  @Prop()
+  trackingNumber?: string;
 
-  @Prop({ type: ShippingAddressSchema, required: true })
-  shippingAddress: ShippingAddress;
+  // Cancellation details
+  @Prop()
+  cancelledAt?: Date;
+
+  @Prop()
+  cancellationReason?: string;
+
+  // Delivery timestamp
+  @Prop()
+  deliveredAt?: Date;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

@@ -14,6 +14,7 @@ import { OrderService } from './orders.service';
 import { JwtAuthGuard } from 'src/auth/guard/auth.guard';
 import { Roles } from 'src/auth/decorators/roles.decorators';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
+import { OrderStatus } from './enums/order-status.enum';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('orders')
@@ -32,6 +33,28 @@ export class OrderController {
     return result;
   }
 
+  @Roles('admin')
+@Patch(':id/payment')
+markAsPaid(
+  @Param('id') id: string,
+) {
+  return this.orderService.markAsPaid(id);
+}
+
+
+  @Roles('user')
+@Patch(':id/cancel')
+cancelOrder(
+  @Param('id') id: string,
+  @Req() req: any,
+  @Body('reason') reason?: string,
+) {
+  return this.orderService.cancelOrder(
+    id,
+    req.user._id,
+    reason,
+  );
+}
 
   @Roles('admin')
   @Get()
@@ -54,15 +77,14 @@ export class OrderController {
     return this.orderService.findById(id);
   }
 
-  
-  @Roles('admin')
-  @Patch(':id/status')
-  updateStatus(
-    @Param('id') id: string,
-    @Body('status') status: 'pending' | 'paid' | 'failed',
-  ) {
-    return this.orderService.updateStatus(id, status);
-  }
 
-  
+  @Roles('admin')
+@Patch(':id/status')
+updateStatus(
+  @Param('id') id: string,
+  @Body('status') status: OrderStatus,
+) {
+  return this.orderService.updateOrderStatus(id, status);
+
+}
 }
