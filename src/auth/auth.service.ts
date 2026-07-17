@@ -60,7 +60,7 @@ export class AuthService {
 
       const refreshToken = this.jwtService.sign(payload, {
         secret: process.env.REFRESH_TOKEN_SECRET,
-        expiresIn: '3m', 
+        expiresIn: '15m', 
       });
 
       
@@ -73,7 +73,7 @@ export class AuthService {
         refreshToken,
         userAgent: req.headers['user-agent']?.toString() || 'unknown',
         ipAddress: req.ip,
-        expiresAt: new Date(Date.now() + 3 * 60 * 1000),
+        expiresAt: new Date(Date.now() +7*24*60 * 60 * 1000),
       });
 
    
@@ -82,13 +82,13 @@ export class AuthService {
          secure:true,
         sameSite: 'none',
 
-        maxAge:3* 60 * 1000, 
+        maxAge:7*24*60* 60 * 1000, 
 
       });
 
       const accessToken = this.jwtService.sign(payload, {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: '1m',
+        expiresIn: '15m',
       })
 
 
@@ -133,7 +133,7 @@ async refreshToken(refreshToken: string, response: Response) {
       },
       {
         secret: process.env.ACCESS_TOKEN_SECRET,
-        expiresIn: "1m",
+        expiresIn: "15m",
       }
     );
 
