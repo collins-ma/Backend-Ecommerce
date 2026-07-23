@@ -1,17 +1,23 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+
 import {
   ShippingAddress,
   ShippingAddressSchema,
 } from './shipping-address.schema';
 
-import { PaymentMethod } from '../enums/payment-method.enum';
+import { CheckoutMethod } from '../enums/checkout-method.enum';
+import { PaymentChannel } from '../enums/payment-channel.enum';
+import { RefundChannel } from '../enums/refund-channel.enum';
 import { PaymentStatus } from '../enums/payment-status.enum';
 import { OrderStatus } from '../enums/order-status.enum';
 
 @Schema({ timestamps: true })
 export class Order extends Document {
+  // ==========================
   // Customer
+  // ==========================
+
   @Prop({
     type: Types.ObjectId,
     ref: 'User',
@@ -19,7 +25,10 @@ export class Order extends Document {
   })
   user!: Types.ObjectId;
 
-  // Products in the order
+  // ==========================
+  // Ordered Items
+  // ==========================
+
   @Prop([
     {
       product: {
@@ -45,22 +54,45 @@ export class Order extends Document {
     priceksh: number;
   }[];
 
-  // Total amount
+  // ==========================
+  // Order Total
+  // ==========================
+
   @Prop({
     required: true,
     min: 0,
   })
   total!: number;
 
-  // Payment method
+  // ==========================
+  // Checkout Method
+  // Customer selected at checkout
+  // MPESA or CASH_ON_DELIVERY
+  // ==========================
+
   @Prop({
     type: String,
-    enum: PaymentMethod,
+    enum: CheckoutMethod,
     required: true,
   })
-  paymentMethod!: PaymentMethod;
+  checkoutMethod!: CheckoutMethod;
 
-  // Payment status
+  // ==========================
+  // Payment Channel
+  // How payment was actually received
+  // CASH or MPESA
+  // ==========================
+
+  @Prop({
+    type: String,
+    enum: PaymentChannel,
+  })
+  paymentChannel?: PaymentChannel;
+
+  // ==========================
+  // Payment Status
+  // ==========================
+
   @Prop({
     type: String,
     enum: PaymentStatus,
@@ -68,7 +100,10 @@ export class Order extends Document {
   })
   paymentStatus!: PaymentStatus;
 
-  // Order status
+  // ==========================
+  // Order Status
+  // ==========================
+
   @Prop({
     type: String,
     enum: OrderStatus,
@@ -76,35 +111,92 @@ export class Order extends Document {
   })
   orderStatus!: OrderStatus;
 
-  // Payment transaction reference
+  // ==========================
+  // Payment Information
+  // ==========================
+
   @Prop()
   transactionId?: string;
 
-  // Payment failure reason
+  @Prop()
+  paidAt?: Date;
+
   @Prop()
   failureReason?: string;
 
-  // Shipping address
+  // ==========================
+  // Refund Information
+  // ==========================
+
+  @Prop({
+    type: String,
+    enum: RefundChannel,
+  })
+  refundChannel?: RefundChannel;
+
+  @Prop()
+  refundTransactionId?: string;
+
+  @Prop()
+  refundRequestedAt?: Date;
+
+  @Prop()
+  refundedAt?: Date;
+
+  // ==========================
+  // Shipping Address
+  // ==========================
+
   @Prop({
     type: ShippingAddressSchema,
     required: true,
   })
   shippingAddress!: ShippingAddress;
 
-  // Courier tracking number
+  // ==========================
+  // Courier Tracking
+  // ==========================
+
   @Prop()
   trackingNumber?: string;
 
-  // Cancellation details
+  // ==========================
+  // Order Timeline
+  // ==========================
+
+  @Prop()
+  confirmedAt?: Date;
+
+  @Prop()
+  processingAt?: Date;
+
+  @Prop()
+  shippedAt?: Date;
+
+  @Prop()
+  deliveredAt?: Date;
+
   @Prop()
   cancelledAt?: Date;
+
+  // ==========================
+  // Cancellation
+  // ==========================
 
   @Prop()
   cancellationReason?: string;
 
-  // Delivery timestamp
-  @Prop()
-  deliveredAt?: Date;
+  // ==========================
+  // Returns
+  // (We'll use this when integrating
+  // the Returns module.)
+  // ==========================
+
+  // @Prop({
+  //   type: String,
+  //   enum: ReturnStatus,
+  // })
+  // returnStatus?: ReturnStatus;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

@@ -5,7 +5,7 @@ import { MpesaStrategy } from './strategies/mpesa.strategy';
 import { ShippingAddressDto } from './payments.dto';
 import { Types } from 'mongoose';
 import { Product } from 'src/products/schema/product.schema';
-import { PaymentMethod } from 'src/orders/enums/payment-method.enum';
+import { CheckoutMethod } from 'src/orders/enums/checkout-method.enum';
 import { PaymentStatus } from 'src/orders/enums/payment-status.enum';
 @Injectable()
 export class PaymentsService {
@@ -18,13 +18,13 @@ export class PaymentsService {
   
  async initiateCart(
   userId: string,
-  paymentMethod: PaymentMethod,
+  checkoutMethod: CheckoutMethod,
   shippingAddress: ShippingAddressDto,
   phoneNumber?: string,
 ) {
 
   if (
-  paymentMethod === PaymentMethod.MPESA &&
+  checkoutMethod === CheckoutMethod.MPESA &&
   !phoneNumber
 ) {
   throw new BadRequestException(
@@ -42,12 +42,12 @@ export class PaymentsService {
     const order = await this.ordersService.createOrder(
   userId,
 
-  paymentMethod,
+  checkoutMethod,
   shippingAddress,
 );
   
 
-if (paymentMethod === PaymentMethod.MPESA) {
+if (checkoutMethod === CheckoutMethod.MPESA) {
   const paymentResponse = await this.mpesa.initiatePayment(
     phoneNumber!,
     order.total,
@@ -56,7 +56,7 @@ if (paymentMethod === PaymentMethod.MPESA) {
 
   return {
     orderId: order._id.toString(),
-    method: paymentMethod,
+    method: checkoutMethod,
     currency: 'KES',
     totalToPay: order.total,
     paymentResponse,
@@ -69,7 +69,7 @@ await this.cartService.clearCart(userId);
 
 return {
   orderId: order._id.toString(),
-  method: paymentMethod,
+  method: checkoutMethod,
   currency: 'KES',
   totalToPay: order.total,
   status: order.paymentStatus,

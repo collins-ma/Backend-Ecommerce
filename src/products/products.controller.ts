@@ -69,8 +69,7 @@ async findAll(@Query('category') category?: string): Promise<Product[]> {
     @UploadedFile() file: Express.Multer.File,
     @Body() createProductDto: CreateProductDto
   ) {
-console.log('FILE',file)
-    console.log("createProdInfo", createProductDto)
+
      if (file) {
         // Upload to Cloudinary and get URL
         const imageUrl = await this.cloudinaryService.uploadImage(file);

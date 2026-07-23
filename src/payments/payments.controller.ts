@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Req, BadRequestException, UseGuards } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guard/auth.guard';
-import { PaymentMethod } from '../orders/enums/payment-method.enum';
+import { CheckoutMethod} from '../orders/enums/checkout-method.enum';
 
 @UseGuards(JwtAuthGuard)
 @Controller('payments')
@@ -16,14 +16,14 @@ export class PaymentsController {
     @Req() req: any,
     @Body()
     body: {
-      paymentMethod: PaymentMethod;
+      checkoutMethod: CheckoutMethod,
       phoneNumber?: string;
       shippingAddress: any;
     },
   ) {
     // Phone number is only required for M-Pesa
     if (
-      body.paymentMethod === PaymentMethod.MPESA &&
+      body.checkoutMethod === CheckoutMethod.MPESA &&
       !body.phoneNumber
     ) {
       throw new BadRequestException(
@@ -33,7 +33,7 @@ export class PaymentsController {
 
     return this.paymentsService.initiateCart(
       req.user._id,
-      body.paymentMethod,
+      body.checkoutMethod,
       body.shippingAddress,
       body.phoneNumber,
     );

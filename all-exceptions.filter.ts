@@ -9,7 +9,7 @@ import * as Sentry from "@sentry/nestjs";
 @Catch()
 export class AllExceptionsFilter extends BaseExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
-   
+   console.error(exception)
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();

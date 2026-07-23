@@ -15,13 +15,37 @@ import { JwtAuthGuard } from 'src/auth/guard/auth.guard';
 import { Roles } from 'src/auth/decorators/roles.decorators';
 import { RolesGuard } from 'src/auth/guard/roles.guard';
 import { OrderStatus } from './enums/order-status.enum';
+import { CompleteRefundDto } from './dto/complete-refund.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('orders')
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
- 
+ @Roles('admin')
+@Patch(':id/record-mpesa-payment')
+recordMpesaPayment(
+  @Param('id') id: string,
+  @Body('transactionId') transactionId: string,
+) {
+  return this.orderService.recordMpesaPayment(
+    id,
+    transactionId,
+  );
+}
+
+
+
+
+@Roles('admin')
+@Patch(':id/record-cash-payment')
+recordCashPayment(
+  @Param('id') id: string,
+) {
+  return this.orderService.recordCashPayment(id);
+}
+
+   
   @Roles('user')
   @Get(':orderId/status')
   async getOrderStatus(@Param('orderId') orderId: string, @Req() req: any) {
@@ -42,16 +66,14 @@ markAsPaid(
 }
 
 
-  @Roles('user')
+@Roles('admin','user')
 @Patch(':id/cancel')
 cancelOrder(
   @Param('id') id: string,
-  @Req() req: any,
   @Body('reason') reason?: string,
 ) {
   return this.orderService.cancelOrder(
     id,
-    req.user._id,
     reason,
   );
 }
@@ -71,12 +93,21 @@ cancelOrder(
   }
 
   
-  @Roles('admin')
+  @Roles('admin','user')
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.orderService.findById(id);
   }
 
+
+@Roles('admin')
+@Patch(':id/complete-refund')
+completeRefund(
+  @Param('id') id: string,
+  @Body() dto: CompleteRefundDto,
+) {
+  return this.orderService.completeRefund(id, dto);
+}
 
   @Roles('admin')
 @Patch(':id/status')

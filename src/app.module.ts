@@ -17,6 +17,7 @@ import { AuthModule } from './auth/auth.module';
 import { SessionModule } from './sessions/sessions.module';
 
 import { SentryModule } from '@sentry/nestjs/setup';
+import { ReturnsModule } from './returns/returns.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { SentryModule } from '@sentry/nestjs/setup';
     PaymentsModule,
     AuthModule,
     SessionModule,
+    ReturnsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
